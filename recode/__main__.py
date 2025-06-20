@@ -3,6 +3,7 @@ import pathlib
 from argparse import ArgumentParser
 from concurrent.futures import ThreadPoolExecutor
 
+from rich import print
 from rich.live import Live
 
 from . import recode, ui
@@ -15,16 +16,26 @@ def create_plan(source: pathlib.Path, dest: pathlib.Path, render: ui.Render):
         return None
 
     match source.suffix.lower():
-        case ".ape" | ".flac" | ".m4a":
+        case ".ape" | ".flac" | ".m4a" | ".mp4":
             return recode.FFMpegPlan(
                 source, dest.with_suffix(".ogg"), render.task_progress
             )
         case ".ogg" | ".cue" | ".mp3" | ".ogg":
             return recode.CopyPlan(source, dest, render.task_progress)
+
+        # Varied sometimes-inclided files that we dont need to copy
+        case (
+            ".jpg" | ".png" | ".log" | ".pdf" | ".txt" | ".ffp" | ".md5" | 
+            ".m3u" | ".nfo" | ".!qb" | ".jpeg" | ".accurip" | ".db" | 
+            ".html" | ".bmp" | ".sfv" | ".htm" | ".sh" | ".gif" | ".zsh" 
+            | ".swf" | ".exe" | ".inf" | ".DS_Store" | ".m3u8" | ".to"
+        ):  # fmt: skip
+            return None
+
         case _:
             # return recode.CopyPlan(source, dest, render.task_progress)
             print(f"Dont know how to handle {source}")
-            ...
+            return None
 
 
 def create_plans(
@@ -39,10 +50,11 @@ def create_plans(
         total=None,
         start=True,
     )
-    for local_source in render.total_progress.track(source.glob("**"), task_id=task):
+    for local_source in source.glob("**"):
         if not local_source.is_file():
             continue
 
+        render.total_progress.advance(task, 1)
         if local_source.name == ".localized":
             continue
 

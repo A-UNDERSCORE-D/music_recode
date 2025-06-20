@@ -30,7 +30,7 @@ class Render(NamedTuple):
 
 def make_render():
     task_progress = RunningFirstProgress(
-        TextColumn("{task.fields[operation_type]:<20} | "),
+        TextColumn("{task.fields[operation_type]:<11} | "),
         TextColumn("{task.description}", table_column=Column(ratio=10)),
         SpinnerColumn(),
         BarColumn(table_column=Column(justify="right")),
@@ -39,7 +39,6 @@ def make_render():
         refresh_per_second=10,
         expand=True,
     )
-
     total_progress = Progress(
         TextColumn("{task.description}", table_column=Column(ratio=1)),
         MofNCompleteColumn(),
@@ -56,10 +55,9 @@ def make_render():
     table.add_row(
         Panel(
             task_progress,
-            height=os.cpu_count(),
+            height=(os.cpu_count() or 4) + 4,
             title="In Progress...",
             title_align="left",
-            padding=(1, 1),
         )
     )
     table.add_row(
@@ -67,7 +65,6 @@ def make_render():
             total_progress,
             title="Total Progress...",
             title_align="left",
-            padding=(1, 1),
         )
     )
 

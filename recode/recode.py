@@ -129,7 +129,7 @@ class FFMpegPlan(Plan):
                 if value.isdecimal():
                     self.progress_us = int(value)
                     self.progress.update(self.task_id, completed=self.progress_us)
-                else:
+                elif value != "N/A":
                     self.progress.print(f"Invalid value for out time {value = !r}")
             case _:
                 pass
@@ -141,7 +141,7 @@ class FFMpegPlan(Plan):
         track_artist = self.format["tags"].get("ARTIST", "UA")
         self.progress.update(
             self.task_id,
-            description=f"{track_artist} - {track_album!r}: {track_name!r}",
+            description=f"{track_artist!r} - {track_album!r}: {track_name!r}",
             total=self.duration,
         )
         super().start_task()
