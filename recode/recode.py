@@ -153,13 +153,10 @@ class FFMpegPlan(Plan):
         super().start_task()
 
     def _stderr_print(self, stderr: TextIOWrapper):
-        self.progress.print(f"[{self.task_id}] Starting stderr monitor....")
         for line in iter(stderr.readline, ""):
             self.progress.print(
                 f"Stderr from {self.tags.get('TITLE', self.source)}: {line!r}"
             )
-
-        self.progress.print(f"[{self.task_id}] Exiting stderr monitor...")
 
     @override
     def _execute(self):
