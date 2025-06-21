@@ -4,9 +4,11 @@ import json
 import pathlib
 import shutil
 import subprocess
+import threading
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from functools import cached_property
+from io import TextIOWrapper
 from typing import TYPE_CHECKING, ClassVar, TypedDict, override
 
 from rich import print
@@ -114,6 +116,10 @@ class FFMpegPlan(Plan):
     def duration(self) -> float:
         return float(self.format["duration"]) * 1_000_000
 
+    @cached_property
+    def tags(self) -> dict[str, str]:
+        return self.format["tags"]
+
     @property
     def ffmpeg_args(self):
         return [
@@ -136,9 +142,9 @@ class FFMpegPlan(Plan):
 
     @override
     def start_task(self):
-        track_name = self.format["tags"].get("TITLE", self.source.name)
-        track_album = self.format["tags"].get("ALBUM", "UAL")
-        track_artist = self.format["tags"].get("ARTIST", "UA")
+        track_name = self.tags.get("TITLE", self.source.name)
+        track_album = self.tags.get("ALBUM", "UAL")
+        track_artist = self.tags.get("ARTIST", "UA")
         self.progress.update(
             self.task_id,
             description=f"{track_artist!r} - {track_album!r}: {track_name!r}",
@@ -146,15 +152,30 @@ class FFMpegPlan(Plan):
         )
         super().start_task()
 
+    def _stderr_print(self, stderr: TextIOWrapper):
+        self.progress.print(f"[{self.task_id}] Starting stderr monitor....")
+        for line in iter(stderr.readline, ""):
+            self.progress.print(
+                f"Stderr from {self.tags.get('TITLE', self.source)}: {line!r}"
+            )
+
+        self.progress.print(f"[{self.task_id}] Exiting stderr monitor...")
+
     @override
     def _execute(self):
         self.dest.parent.mkdir(parents=True, exist_ok=True)
         proc = subprocess.Popen(
             ["ffmpeg", *self.DEFAULT_FLAGS, *self.ffmpeg_args],
             stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
             text=True,
         )
         assert proc.stdout is not None
+        assert proc.stderr is not None
+
+        threading.Thread(
+            daemon=True, target=self._stderr_print, args=(proc.stderr,)
+        ).start()
 
         line = ""
         for line in iter(proc.stdout.readline, ""):
