@@ -1,0 +1,5 @@
+# Skipping out on a full pyproj for now; Im not gonna release this yet
+[tool.pyright]
+typeCheckingMode = 'strict'
+
+reportUnusedCallResult = 'none'

@@ -8,28 +8,31 @@ from rich.live import Live
 
 from . import recode, ui
 
-ignored_globs = [".localized"]
+IGNORED_GLOBS = [".localized"]
+
+TO_RECODE = [".ape", ".flac", ".m4a", ".mp4"]
+TO_SKIP = [
+    ".jpg", ".png", ".log", ".pdf", ".txt", ".ffp", ".md5", ".m3u", ".nfo",
+    ".!qb", ".jpeg", ".accurip", ".db", ".html", ".bmp", ".sfv", ".htm", ".sh",
+    ".gif", ".zsh", ".swf", ".exe", ".inf", ".DS_Store", ".m3u8", ".to",
+]  # fmt: skip
+TO_COPY = [".ogg", ".cue", ".mp3", ".ogg"]
 
 
 def create_plan(source: pathlib.Path, dest: pathlib.Path, render: ui.Render):
-    if any(source.match(f) for f in ignored_globs):
+    if any(source.match(f) for f in IGNORED_GLOBS):
         return None
 
     match source.suffix.lower():
-        case ".ape" | ".flac" | ".m4a" | ".mp4":
+        case s if s in TO_RECODE:
             return recode.FFMpegPlan(
                 source, dest.with_suffix(".ogg"), render.task_progress
             )
-        case ".ogg" | ".cue" | ".mp3" | ".ogg":
+        case v if v in TO_COPY:
             return recode.CopyPlan(source, dest, render.task_progress)
 
         # Varied sometimes-inclided files that we dont need to copy
-        case (
-            ".jpg" | ".png" | ".log" | ".pdf" | ".txt" | ".ffp" | ".md5" | 
-            ".m3u" | ".nfo" | ".!qb" | ".jpeg" | ".accurip" | ".db" | 
-            ".html" | ".bmp" | ".sfv" | ".htm" | ".sh" | ".gif" | ".zsh" 
-            | ".swf" | ".exe" | ".inf" | ".DS_Store" | ".m3u8" | ".to"
-        ):  # fmt: skip
+        case v if v in TO_SKIP:
             return None
 
         case _:
@@ -84,21 +87,21 @@ def main(source: pathlib.Path, dest: pathlib.Path):
 
 if __name__ == "__main__":
     parser = ArgumentParser()
-    _ = parser.add_argument(
+    parser.add_argument(
         "--source-path",
         "-s",
         type=pathlib.Path,
         required=True,
         help="Source of media files",
     )
-    _ = parser.add_argument(
+    parser.add_argument(
         "--dest-path",
         "-d",
         type=pathlib.Path,
         required=True,
         help="Dest of media files",
     )
-    _ = parser.add_argument("--copy-unknown", action="store_true")
+
     parsed = parser.parse_args()
 
     main(parsed.source_path, parsed.dest_path)
