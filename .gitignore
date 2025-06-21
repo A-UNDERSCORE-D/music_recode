@@ -2,3 +2,4 @@ venv
 Daft Punk
 example
 .ruff_cache
+__pycache__
